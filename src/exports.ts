@@ -48,19 +48,22 @@ export function formatAggregationExports(
  * @internal
  */
 function replaceDtsWithJsExtensions(dtsFilePath: string) {
-  return dtsFilePath.replace(/\.d\.(ts|mts|cts)$/, (_, fileExtension: string) => {
-    switch (fileExtension) {
-      case 'ts':
-      case 'tsx':
-        return '.js'
-      case 'mts':
-        return '.mjs'
-      case 'cts':
-        return '.cjs'
-      default:
-        return ''
-    }
-  })
+  return dtsFilePath.replace(
+    /\.d\.(ts|mts|cts)$/,
+    (_, fileExtension: string) => {
+      switch (fileExtension) {
+        case 'ts':
+        case 'tsx':
+          return '.js'
+        case 'mts':
+          return '.mjs'
+        case 'cts':
+          return '.cjs'
+        default:
+          return ''
+      }
+    },
+  )
 }
 
 function formatAggregationExport(
