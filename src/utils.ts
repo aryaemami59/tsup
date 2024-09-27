@@ -3,7 +3,8 @@ import path from 'node:path'
 import resolveFrom from 'resolve-from'
 import strip from 'strip-json-comments'
 import { glob } from 'tinyglobby'
-import type { Entry, Format } from './options'
+import { loadPkg } from './load'
+import type { Entry, Format, NormalizedOptions } from './options'
 
 export type MaybePromise<T> = T | Promise<T>
 
@@ -241,4 +242,41 @@ export function trimDtsExtension(fileName: string) {
 export function writeFileSync(filePath: string, content: string) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true })
   fs.writeFileSync(filePath, content)
+}
+
+/**
+ * Resolves the
+ * {@linkcode NormalizedOptions.outputExtensionMap | output extension map}
+ * for each specified {@linkcode Format | format}
+ * in the provided {@linkcode options}.
+ *
+ * @param options - The normalized options containing format and output extension details.
+ * @returns A {@linkcode Promise | promise} that resolves to a {@linkcode Map}, where each key is a {@linkcode Format | format} and each value is an object containing the resolved output extensions for both `js` and `dts` files.
+ *
+ * @internal
+ */
+export const resolveOutputExtensionMap = async (
+  options: NormalizedOptions,
+): Promise<NormalizedOptions['outputExtensionMap']> => {
+  const pkg = await loadPkg(process.cwd())
+
+  const formatOutExtension = new Map(
+    options.format.map((format) => {
+      const outputExtensions = options.outExtension?.({
+        format,
+        options,
+        pkgType: pkg.type,
+      })
+
+      return [
+        format,
+        {
+          ...defaultOutExtension({ format, pkgType: pkg.type }),
+          ...(outputExtensions || {}),
+        },
+      ] as const
+    }),
+  )
+
+  return formatOutExtension
 }
