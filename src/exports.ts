@@ -1,5 +1,5 @@
 import path from 'node:path'
-import { slash, trimDtsExtension, truthy } from './utils'
+import { slash, truthy } from './utils'
 
 export type ExportDeclaration = ModuleExport | NamedExport
 
@@ -37,18 +37,44 @@ export function formatAggregationExports(
   return `${lines.join('\n')}\n`
 }
 
+/**
+ * Replaces TypeScript declaration file
+ * extensions (`.d.ts`, `.d.mts`, `.d.cts`)
+ * with their corresponding JavaScript variants (`.js`, `.mjs`, `.cjs`).
+ *
+ * @param dtsFilePath - The file path to be transformed.
+ * @returns The updated file path with the JavaScript extension.
+ *
+ * @internal
+ */
+function replaceDtsWithJsExtensions(dtsFilePath: string) {
+  return dtsFilePath.replace(/\.d\.(ts|mts|cts)$/, (_, fileExtension: string) => {
+    switch (fileExtension) {
+      case 'ts':
+      case 'tsx':
+        return '.js'
+      case 'mts':
+        return '.mjs'
+      case 'cts':
+        return '.cjs'
+      default:
+        return ''
+    }
+  })
+}
+
 function formatAggregationExport(
   declaration: ExportDeclaration,
   declarationDirPath: string,
 ): string {
-  const dest = trimDtsExtension(
+  const dest = replaceDtsWithJsExtensions(
     `./${path.posix.normalize(
       slash(path.relative(declarationDirPath, declaration.destFileName)),
     )}`,
   )
 
   if (declaration.kind === 'module') {
-    // No implemeted
+    // No implemented
     return ''
   } else if (declaration.kind === 'named') {
     return [
@@ -72,7 +98,7 @@ export function formatDistributionExports(
   fromFilePath: string,
   toFilePath: string,
 ) {
-  let importPath = trimDtsExtension(
+  let importPath = replaceDtsWithJsExtensions(
     path.posix.relative(
       path.posix.dirname(path.posix.normalize(slash(fromFilePath))),
       path.posix.normalize(slash(toFilePath)),
