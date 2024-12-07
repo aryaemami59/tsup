@@ -1,26 +1,21 @@
+import type {
+  ExtractorResult,
+  IConfigFile,
+  IExtractorConfigPrepareOptions,
+} from '@microsoft/api-extractor'
 import path from 'node:path'
 import { handleError } from './errors'
-import {
-  type ExportDeclaration,
-  formatAggregationExports,
-  formatDistributionExports,
-} from './exports'
+import { type ExportDeclaration } from './exports'
 import { loadPkg } from './load'
 import { createLogger } from './log'
+import type { Format, NormalizedOptions } from './options'
 import {
   defaultOutExtension,
   ensureTempDeclarationDir,
   getApiExtractor,
   removeFiles,
   toAbsolutePath,
-  writeFileSync,
 } from './utils'
-import type { Format, NormalizedOptions } from './options'
-import type {
-  ExtractorResult,
-  IConfigFile,
-  IExtractorConfigPrepareOptions,
-} from '@microsoft/api-extractor'
 
 const logger = createLogger()
 
@@ -46,6 +41,7 @@ function rollupDtsFile(
     },
     tsdocMetadata: { enabled: false },
     compiler: {
+      // overrideTsconfig: { compileOptions: { outDir: './.tsup/declaration' } },
       tsconfigFilePath,
     },
     projectFolder: cwd,
@@ -88,18 +84,10 @@ async function rollupDtsFiles(
   exports: ExportDeclaration[],
   format: Format,
 ) {
-  if (!options.experimentalDts || !options.experimentalDts?.entry) {
-    return
-  }
-
-  /**
-   * `.tsup/declaration` directory
-   */
   const declarationDir = ensureTempDeclarationDir()
   const outDir = options.outDir || 'dist'
   const pkg = await loadPkg(process.cwd())
   const dtsExtension = defaultOutExtension({ format, pkgType: pkg.type }).dts
-  const tsconfig = options.tsconfig || 'tsconfig.json'
 
   let dtsInputFilePath = path.join(
     declarationDir,
@@ -114,57 +102,54 @@ async function rollupDtsFiles(
     .replace(/\.d\.mts$/, '.dmts.d.ts')
     .replace(/\.d\.cts$/, '.dcts.d.ts')
 
-  const dtsOutputFilePath = path.join(outDir, `_tsup-dts-rollup${dtsExtension}`)
+  // const dtsOutputFilePath = path.join(outDir, `_tsup-dts-rollup${dtsExtension}`)
+  // const dtsOutputFilePath = path.join(outDir, `_tsup-dts-rollup${dtsExtension}`)
 
-  writeFileSync(
-    dtsInputFilePath,
-    formatAggregationExports(exports, declarationDir),
-  )
+  // writeFileSync(
+  //   dtsInputFilePath,
+  //   formatAggregationExports(exports, declarationDir),
+  // )
 
-  rollupDtsFile(dtsInputFilePath, dtsOutputFilePath, tsconfig)
+  // logger.info(
+  //   `⚡️⚡️⚡️ formatAggregationExports`,
+  //   formatAggregationExports(exports, declarationDir),
+  // )
+  // rollupDtsFile(
+  //   dtsInputFilePath,
+  //   dtsOutputFilePath,
+  //   options.tsconfig || 'tsconfig.json',
+  // )
 
   for (let [out, sourceFileName] of Object.entries(
-    options.experimentalDts.entry,
+    options.experimentalDts!.entry,
   )) {
-    /**
-     * Source file name (`src/index.ts`)
-     *
-     * @example
-     *
-     * ```ts
-     * import { defineConfig } from 'tsup'
-     *
-     * export default defineConfig({
-     *   entry: { index: 'src/index.ts' },
-     *   // Here `src/index.ts` is our `sourceFileName`.
-     * })
-     * ```
-     */
     sourceFileName = toAbsolutePath(sourceFileName)
-    /**
-     * Output file name (`dist/index.d.ts`)
-     *
-     * @example
-     *
-     * ```ts
-     * import { defineConfig } from 'tsup'
-     *
-     * export default defineConfig({
-     *  entry: { index: 'src/index.ts' },
-     * // Here `dist/index.d.ts` is our `outFileName`.
-     * })
-     * ```
-     */
     const outFileName = path.join(outDir, out + dtsExtension)
+    console.log({ out, sourceFileName, declarationDir })
+    // logger.info(`⚡️⚡️⚡️`, dtsOutputFilePath)
+    // logger.info(`⚡️⚡️⚡️`, out, sourceFileName, outFileName)
 
     // Find all declarations that are exported from the current source file
     const currentExports = exports.filter(
       (declaration) => declaration.sourceFileName === sourceFileName,
     )
 
-    writeFileSync(
+    // logger.info(`⚡️⚡️⚡️ currentExports`, currentExports)
+
+    // writeFileSync(
+    //   outFileName,
+    //   formatDistributionExports(currentExports, outFileName, dtsOutputFilePath),
+    // )
+
+    // logger.info(
+    //   `⚡️⚡️⚡️ formatDistributionExports`,
+    //   formatDistributionExports(currentExports, outFileName, dtsOutputFilePath),
+    // )
+
+    rollupDtsFile(
+      path.join(declarationDir, `${path.basename(sourceFileName, '.ts')}.d.ts`),
       outFileName,
-      formatDistributionExports(currentExports, outFileName, dtsOutputFilePath),
+      options.tsconfig || 'tsconfig.json',
     )
   }
 }

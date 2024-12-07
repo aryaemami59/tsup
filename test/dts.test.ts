@@ -349,7 +349,7 @@ test('should emit declaration files with experimentalDts', async () => {
 test('should only include exported declarations with experimentalDts', async () => {
   const files = {
     'package.json': `{ "name": "tsup-playground", "private": true }`,
-    'tsconfig.json': `{ "compilerOptions": { "skipLibCheck": true } }`,
+    'tsconfig.json': `{ "compilerOptions": { "skipLibCheck": true, "rootDir": "./src" }, "include": ["src"] }`,
     'tsup.config.ts': `
         export default {
           entry: ['./src/entry1.ts', './src/entry2.ts']
