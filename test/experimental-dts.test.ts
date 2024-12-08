@@ -166,8 +166,23 @@ test('experimentalDts works when `entry` is set to an array', async ({
 
   const cwd = path.dirname(outDir)
 
+  const promiseWithChild = execFile('pnpm', ['pack'], {
+    cwd,
+    shell: true,
+  })
+
+  await expect(promiseWithChild).resolves.not.toThrow()
+
+  const { stdout } = await promiseWithChild
+
+  const packedName = stdout.trim().split('\n').pop()
+
+  if (!packedName) {
+    throw new Error('No package name found')
+  }
+
   await expect(
-    execFile('npx', ['-y', '@arethetypeswrong/cli', '-P'], {
+    execFile('npx', ['-y', '@arethetypeswrong/cli', packedName], {
       cwd,
       shell: true,
     }),
@@ -776,24 +791,28 @@ test(
     await expect(
       execFile('node', [path.resolve(__dirname, '../dist/cli-default.js')], {
         cwd: 'test/.cache/check-bundled-type-definitions/my-lib',
+        shell: true,
       }),
     ).resolves.not.toThrow()
 
     await expect(
       execFile('pnpm', ['pack'], {
         cwd: 'test/.cache/check-bundled-type-definitions/my-lib',
+        shell: true,
       }),
     ).resolves.not.toThrow()
 
     await expect(
       execFile('pnpm', ['install'], {
         cwd: 'test/.cache/check-bundled-type-definitions/consuming-library',
+        shell: true,
       }),
     ).resolves.not.toThrow()
 
     await expect(
       execFile('tsc', ['-p', 'tsconfig.json'], {
         cwd: 'test/.cache/check-bundled-type-definitions/consuming-library',
+        shell: true,
       }),
     ).resolves.not.toThrow()
   },
