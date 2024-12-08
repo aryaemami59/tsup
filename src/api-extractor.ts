@@ -41,7 +41,6 @@ function rollupDtsFile(
     },
     tsdocMetadata: { enabled: false },
     compiler: {
-      // overrideTsconfig: { compileOptions: { outDir: './.tsup/declaration' } },
       tsconfigFilePath,
     },
     projectFolder: cwd,
@@ -84,72 +83,57 @@ async function rollupDtsFiles(
   exports: ExportDeclaration[],
   format: Format,
 ) {
+  if (!options.experimentalDts || !options.experimentalDts?.entry) {
+    return
+  }
+
+  /**
+   * `.tsup/declaration` directory
+   */
   const declarationDir = ensureTempDeclarationDir()
   const outDir = options.outDir || 'dist'
   const pkg = await loadPkg(process.cwd())
   const dtsExtension = defaultOutExtension({ format, pkgType: pkg.type }).dts
-
-  let dtsInputFilePath = path.join(
-    declarationDir,
-    `_tsup-dts-aggregation${dtsExtension}`,
-  )
-  // @microsoft/api-extractor doesn't support `.d.mts` and `.d.cts` file as a
-  // entrypoint yet. So we replace the extension here as a temporary workaround.
-  //
-  // See the issue for more details:
-  // https://github.com/microsoft/rushstack/pull/4196
-  dtsInputFilePath = dtsInputFilePath
-    .replace(/\.d\.mts$/, '.dmts.d.ts')
-    .replace(/\.d\.cts$/, '.dcts.d.ts')
-
-  // const dtsOutputFilePath = path.join(outDir, `_tsup-dts-rollup${dtsExtension}`)
-  // const dtsOutputFilePath = path.join(outDir, `_tsup-dts-rollup${dtsExtension}`)
-
-  // writeFileSync(
-  //   dtsInputFilePath,
-  //   formatAggregationExports(exports, declarationDir),
-  // )
-
-  // logger.info(
-  //   `⚡️⚡️⚡️ formatAggregationExports`,
-  //   formatAggregationExports(exports, declarationDir),
-  // )
-  // rollupDtsFile(
-  //   dtsInputFilePath,
-  //   dtsOutputFilePath,
-  //   options.tsconfig || 'tsconfig.json',
-  // )
+  const tsconfig = options.tsconfig || 'tsconfig.json'
 
   for (let [out, sourceFileName] of Object.entries(
-    options.experimentalDts!.entry,
+    options.experimentalDts.entry,
   )) {
+    /**
+     * Source file name (`src/index.ts`)
+     *
+     * @example
+     *
+     * ```ts
+     * import { defineConfig } from 'tsup'
+     *
+     * export default defineConfig({
+     *   entry: { index: 'src/index.ts' },
+     *   // Here `src/index.ts` is our `sourceFileName`.
+     * })
+     * ```
+     */
     sourceFileName = toAbsolutePath(sourceFileName)
+    /**
+     * Output file name (`dist/index.d.ts`)
+     *
+     * @example
+     *
+     * ```ts
+     * import { defineConfig } from 'tsup'
+     *
+     * export default defineConfig({
+     *  entry: { index: 'src/index.ts' },
+     * // Here `dist/index.d.ts` is our `outFileName`.
+     * })
+     * ```
+     */
     const outFileName = path.join(outDir, out + dtsExtension)
-    console.log({ out, sourceFileName, declarationDir })
-    // logger.info(`⚡️⚡️⚡️`, dtsOutputFilePath)
-    // logger.info(`⚡️⚡️⚡️`, out, sourceFileName, outFileName)
-
-    // Find all declarations that are exported from the current source file
-    const currentExports = exports.filter(
-      (declaration) => declaration.sourceFileName === sourceFileName,
-    )
-
-    // logger.info(`⚡️⚡️⚡️ currentExports`, currentExports)
-
-    // writeFileSync(
-    //   outFileName,
-    //   formatDistributionExports(currentExports, outFileName, dtsOutputFilePath),
-    // )
-
-    // logger.info(
-    //   `⚡️⚡️⚡️ formatDistributionExports`,
-    //   formatDistributionExports(currentExports, outFileName, dtsOutputFilePath),
-    // )
 
     rollupDtsFile(
       path.join(declarationDir, `${path.basename(sourceFileName, '.ts')}.d.ts`),
       outFileName,
-      options.tsconfig || 'tsconfig.json',
+      tsconfig,
     )
   }
 }
