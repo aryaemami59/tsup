@@ -126,6 +126,9 @@ test('experimentalDts works when `entry` is set to an array', async ({
             './package.json': './package.json',
           },
           files: ['dist'],
+          devDependencies: {
+            '@arethetypeswrong/cli': '*',
+          },
         },
         null,
         2,
@@ -166,8 +169,30 @@ test('experimentalDts works when `entry` is set to an array', async ({
 
   const cwd = path.dirname(outDir)
 
+  expect(
+    execFile('pnpm', ['install'], {
+      cwd,
+      shell: true,
+    }),
+  ).resolves.not.toThrow()
+
+  const promiseWithChild = execFile('pnpm', ['pack'], {
+    cwd,
+    shell: true,
+  })
+
+  await expect(promiseWithChild).resolves.not.toThrow()
+
+  const { stdout } = await promiseWithChild
+
+  const packedName = stdout.trim().split('\n').pop()
+
+  if (!packedName) {
+    throw new Error('No package name found')
+  }
+
   await expect(
-    execFile('npx', ['-y', '@arethetypeswrong/cli', '-P'], {
+    execFile('npx', ['@arethetypeswrong/cli', packedName], {
       cwd,
       shell: true,
     }),
@@ -640,7 +665,7 @@ test('removal of _tsup-dts-rollup does not break multiple-entrypoint packages', 
 
 test(
   'removal of _tsup-dts-rollup does not break multiple-entrypoint packages1',
-  { todo: true },
+  { todo: false },
   async ({ expect, task }) => {
     const testName = getTestName().toLowerCase()
 
@@ -774,26 +799,30 @@ test(
     )
 
     await expect(
-      execFile('node', [path.resolve(__dirname, '../dist/cli-default.js')], {
+      execFile('node', [path.join(__dirname, '..', 'dist', 'cli-default.js')], {
         cwd: 'test/.cache/check-bundled-type-definitions/my-lib',
+        shell: true,
       }),
     ).resolves.not.toThrow()
 
     await expect(
       execFile('pnpm', ['pack'], {
         cwd: 'test/.cache/check-bundled-type-definitions/my-lib',
+        shell: true,
       }),
     ).resolves.not.toThrow()
 
     await expect(
       execFile('pnpm', ['install'], {
         cwd: 'test/.cache/check-bundled-type-definitions/consuming-library',
+        shell: true,
       }),
     ).resolves.not.toThrow()
 
     await expect(
       execFile('tsc', ['-p', 'tsconfig.json'], {
         cwd: 'test/.cache/check-bundled-type-definitions/consuming-library',
+        shell: true,
       }),
     ).resolves.not.toThrow()
   },
@@ -805,14 +834,13 @@ test(
   async ({ expect, task }) => {
     const testName = getTestName().toLowerCase()
 
-    const folderPath = path.resolve(
-      'test/.cache/check-bundled-type-definitions',
+    const folderPath = path.join(
+      __dirname,
+      '.cache',
+      'check-bundled-type-definitions',
     )
 
-    await fs.mkdir(
-      path.resolve('test/.cache/check-bundled-type-definitions/my-lib'),
-      { recursive: true },
-    )
+    await fs.mkdir(path.join(folderPath, 'my-lib'), { recursive: true })
 
     const files: Record<string, string> = {
       'my-lib/src/foo.ts': `export * from './internal.js'`,
@@ -930,7 +958,7 @@ test(
 
     await Promise.all(
       Object.keys(files).map(async (name) => {
-        const filePath = path.resolve(folderPath, name)
+        const filePath = path.join(folderPath, name)
         const parentDir = path.dirname(filePath)
         await fs.mkdir(parentDir, { recursive: true })
         return fs.writeFile(filePath, files[name], { encoding: 'utf8' })
@@ -939,8 +967,11 @@ test(
 
     const processPromise = execFile(
       'node',
-      [path.resolve(__dirname, '../dist/cli-default.js')],
-      { cwd: 'test/.cache/check-bundled-type-definitions/my-lib' },
+      [path.join(__dirname, '..', 'dist', 'cli-default.js')],
+      {
+        cwd: 'test/.cache/check-bundled-type-definitions/my-lib',
+        shell: true,
+      },
     )
 
     await expect(processPromise).resolves.not.toThrow()
@@ -950,31 +981,38 @@ test(
     await expect(
       execFile('pnpm', ['pack'], {
         cwd: 'test/.cache/check-bundled-type-definitions/my-lib',
+        shell: true,
       }),
     ).resolves.not.toThrow()
 
     await expect(
       execFile('pnpm', ['install'], {
         cwd: 'test/.cache/check-bundled-type-definitions/consuming-library',
+        shell: true,
       }),
     ).resolves.not.toThrow()
 
     await expect(
       execFile('tsc', ['-p', 'tsconfig.json'], {
         cwd: 'test/.cache/check-bundled-type-definitions/consuming-library',
+        shell: true,
       }),
     ).resolves.not.toThrow()
 
     await expect(
       execFile(
         'rm -rf dist && tsc -p tsconfig.json --module ESNext --moduleResolution Bundler',
-        { cwd: 'test/.cache/check-bundled-type-definitions/consuming-library' },
+        {
+          cwd: 'test/.cache/check-bundled-type-definitions/consuming-library',
+          shell: true,
+        },
       ),
     ).resolves.not.toThrow()
 
     await expect(
       execFile('rm', ['-rf', 'dist'], {
         cwd: 'test/.cache/check-bundled-type-definitions/consuming-library',
+        shell: true,
       }),
     ).resolves.not.toThrow()
 
@@ -989,7 +1027,10 @@ test(
           '--moduleResolution',
           'Node10',
         ],
-        { cwd: 'test/.cache/check-bundled-type-definitions/consuming-library' },
+        {
+          cwd: 'test/.cache/check-bundled-type-definitions/consuming-library',
+          shell: true,
+        },
       ),
     ).resolves.not.toThrow()
   },
