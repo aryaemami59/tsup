@@ -2,19 +2,16 @@ import fs from 'node:fs'
 import fsp from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { expect } from 'vitest'
 import { exec } from 'tinyexec'
 import { glob } from 'tinyglobby'
+import { expect } from 'vitest'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const cacheDir = path.resolve(__dirname, '.cache')
 const bin = path.resolve(__dirname, '../dist/cli-default.js')
 
 export function getTestName() {
-  const name = expect
-    .getState()
-    .currentTestName?.replace(/^[a-z]+/g, '_')
-    .replace(/-/g, '_')
+  const name = expect.getState().currentTestName?.replace(/[^a-zA-Z0-9]+/g, '-')
 
   if (!name) {
     throw new Error('No test name')
